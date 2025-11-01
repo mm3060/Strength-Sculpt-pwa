@@ -1,0 +1,123 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Strength Sculpt PWA – USDA</title>
+<link rel="manifest" href="manifest.json">
+<style>
+body {font-family: Arial, sans-serif; margin:0; padding:0; background:#f0f0f0;}
+header, footer {background:#333; color:#fff; text-align:center; padding:10px;}
+nav {display:flex; justify-content:space-around; background:#444; color:#fff;}
+nav button {flex:1; padding:10px; border:none; background:none; color:#fff;}
+section {padding:15px;}
+.exercise, .recipe, .log-entry {background:#fff; margin-bottom:10px; padding:10px; border-radius:5px;}
+video {max-width:100%; border-radius:5px;}
+button {padding:5px 10px; margin-top:5px;}
+</style>
+</head>
+<body>
+
+<header><h1>Strength Sculpt</h1></header>
+
+<nav>
+<button onclick="showSection('exercises')">Exercises</button>
+<button onclick="showSection('nutrition')">Nutrition</button>
+<button onclick="showSection('recipes')">Recipes</button>
+<button onclick="showSection('progress')">Progress</button>
+</nav>
+
+<section id="exercises" style="display:block;">
+<h2>Exercises</h2>
+<div class="exercise">
+<h3>Push-Up</h3>
+<video controls src="https://www.youtube.com/embed/_l3ySVKYVJ8"></video>
+<p>Reps: 3x12 | Weight: Bodyweight</p>
+<button onclick="recordExercise('Push-Up')">Record Set</button>
+<video id="pushupRecording" controls style="display:none;"></video>
+</div>
+<div class="exercise">
+<h3>Pull-Up</h3>
+<video controls src="https://www.youtube.com/embed/eGo4IYlbE5g"></video>
+<p>Reps: 3x4 | Assisted if needed</p>
+<button onclick="recordExercise('Pull-Up')">Record Set</button>
+<video id="pullupRecording" controls style="display:none;"></video>
+</div>
+</section>
+
+<section id="nutrition" style="display:none;">
+<h2>Nutrition Tracker</h2>
+<p>Daily Protein: <span id="dailyProtein">0</span>g</p>
+<p>Calories: <span id="dailyCalories">0</span></p>
+</section>
+
+<section id="recipes" style="display:none;">
+<h2>Custom Recipe Builder</h2>
+<input type="text" id="ingredientName" placeholder="Ingredient">
+<input type="number" id="ingredientAmount" placeholder="Grams">
+<button onclick="addIngredient()">Add Ingredient</button>
+<ul id="ingredientList"></ul>
+<p>Total Protein: <span id="recipeProtein">0</span>g | Calories: <span id="recipeCalories">0</span></p>
+<p>⚠️ Replace 'YOUR_API_KEY' in the script with your USDA API key before use.</p>
+</section>
+
+<section id="progress" style="display:none;">
+<h2>Progress</h2>
+<p>Charts and weekly tracking coming soon.</p>
+</section>
+
+<footer>&copy; 2025 Strength Sculpt PWA</footer>
+
+<script>
+let currentSection = 'exercises';
+function showSection(sectionId){
+  document.querySelectorAll('section').forEach(sec => sec.style.display='none');
+  document.getElementById(sectionId).style.display='block';
+  currentSection = sectionId;
+}
+
+// Camera form-check placeholder
+async function recordExercise(exerciseName){
+  const stream = await navigator.mediaDevices.getUserMedia({video:true});
+  const videoElem = document.getElementById(exerciseName.toLowerCase().replace(' ','') + 'Recording');
+  videoElem.style.display = 'block';
+  videoElem.srcObject = stream;
+  // MediaRecorder logic can be added for saving/replaying
+}
+
+// USDA API integration for live nutrition
+let recipeProtein=0, recipeCalories=0;
+async function getNutrition(name, amount){
+  const apiKey = 'YOUR_API_KEY';
+  const searchUrl = `https://api.nal.usda.gov/fdc/v1/foods/search?query=${name}&pageSize=1&api_key=${apiKey}`;
+  try{
+    const res = await fetch(searchUrl);
+    const data = await res.json();
+    if(data.foods && data.foods.length > 0){
+      const nutrients = data.foods[0].foodNutrients;
+      const protein = (nutrients.find(n => n.nutrientName==="Protein")?.value || 0) * (amount/100);
+      const calories = (nutrients.find(n => n.nutrientName==="Energy")?.value || 0) * (amount/100);
+      return {protein, calories};
+    }
+  } catch(e){console.error(e);}
+  return {protein:0, calories:0};
+}
+
+async function addIngredient(){
+  const name = document.getElementById('ingredientName').value;
+  const amount = parseInt(document.getElementById('ingredientAmount').value);
+  if(!name || !amount) return;
+  const nutrition = await getNutrition(name, amount);
+  recipeProtein += nutrition.protein;
+  recipeCalories += nutrition.calories;
+  const li = document.createElement('li');
+  li.textContent = `${name}: ${amount}g | Protein: ${nutrition.protein.toFixed(1)}g, Calories: ${nutrition.calories.toFixed(0)}`;
+  document.getElementById('ingredientList').appendChild(li);
+  document.getElementById('recipeProtein').textContent = recipeProtein.toFixed(1);
+  document.getElementById('recipeCalories').textContent = recipeCalories.toFixed(0);
+}
+</script>
+
+</body>
+</html>
