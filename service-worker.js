@@ -1,4 +1,13 @@
 const CACHE_NAME = "ssculpt-cache-v1";
+const assetsToCache = [
+  "/",
+  "/index.html",
+  "/style.css",
+  "/script.js",
+  "/manifest.json",
+  "/icon-192.png",
+  "/icon-512.png"
+];
 
 const ASSETS = [
   "/Strength-Sculpt-pwa/",
@@ -39,3 +48,4 @@ self.addEventListener("fetch", (event) => {
     })
   );
 });
+
