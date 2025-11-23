@@ -1,51 +1,52 @@
-const CACHE_NAME = "ssculpt-cache-v1";
-const assetsToCache = [
-  "/",
-  "/index.html",
-  "/style.css",
-  "/script.js",
-  "/manifest.json",
-  "/icon-192.png",
-  "/icon-512.png"
+const CACHE_NAME = "ssculpt-cache-v2";
+
+const ASSETS_TO_CACHE = [
+  "./",
+  "./index.html",
+  "./style.css",
+  "./script.js",
+  "./manifest.json",
+  "./icon-192.png",
+  "./icon-512.png"
 ];
 
-const ASSETS = [
-  "/Strength-Sculpt-pwa/",
-  "/Strength-Sculpt-pwa/index.html",
-  "/Strength-Sculpt-pwa/style.css",
-  "/Strength-Sculpt-pwa/script.js",
-  "/Strength-Sculpt-pwa/manifest.json"
-];
-
-// Install: cache core assets
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(ASSETS))
-      .then(() => self.skipWaiting())
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(ASSETS_TO_CACHE);
+    })
   );
 });
 
-// Activate: remove old caches
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(
         keys.map((key) => {
-          if (key !== CACHE_NAME) return caches.delete(key);
+          if (key !== CACHE_NAME) {
+            return caches.delete(key);
+          }
         })
       )
     )
   );
-  self.clients.claim();
 });
 
-// Fetch: serve cached versions first
 self.addEventListener("fetch", (event) => {
+  const req = event.request;
+
+  if (req.method !== "GET") return;
+
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      return cached || fetch(event.request);
+    caches.match(req).then((cached) => {
+      if (cached) return cached;
+
+      return fetch(req).catch(() => {
+        // Offline & no match in cache
+        if (req.mode === "navigate") {
+          return caches.match("./index.html");
+        }
+      });
     })
   );
 });
-
