@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Strength Sculpt</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="logo">SS</div>
+    <div class="title-block">
+      <h1>Strength Sculpt</h1>
+      <p class="subtitle">Build strength. Stay lean. Vegan-powered.</p>
+    </div>
+  </header>
+
+  <main id="app-main">
+    <!-- Exercises Screen -->
+    <section id="screen-exercises" class="screen active">
+      <h2>Today's Workout</h2>
+      <p class="hint">Pick a day, log sets with weight + reps, and use the camera for form-check.</p>
+      <div id="exercise-day-tabs" class="pill-row"></div>
+      <div id="exercise-list"></div>
+    </section>
+
+    <!-- Nutrition Screen -->
+    <section id="screen-nutrition" class="screen">
+      <h2>Daily Nutrition</h2>
+      <div class="card-row">
+        <div class="stat-card">
+          <div class="stat-label">Protein Today</div>
+          <div class="stat-value"><span id="stat-protein">0</span> g</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Calories Today</div>
+          <div class="stat-value"><span id="stat-calories">0</span> kcal</div>
+        </div>
+      </div>
+
+      <h3>Log a Meal</h3>
+      <div class="form-row">
+        <input id="meal-name" type="text" placeholder="Meal name (e.g. Lentil Bowl)" />
+        <input id="meal-protein" type="number" placeholder="Protein g" />
+        <input id="meal-calories" type="number" placeholder="kcal" />
+        <button id="btn-add-meal">Add</button>
+      </div>
+      <div id="meal-log"></div>
+    </section>
+
+    <!-- Recipes Screen -->
+    <section id="screen-recipes" class="screen">
+      <h2>Custom Recipe Builder</h2>
+      <p class="hint">
+        Type an ingredient and grams. We’ll call USDA to estimate protein & calories.
+        (Works best with simple names like “lentils”, “chickpeas”, “seitan”.)
+      </p>
+
+      <div class="form-row">
+        <input id="ingredient-name" type="text" placeholder="Ingredient name" />
+        <input id="ingredient-grams" type="number" placeholder="Grams" />
+        <button id="btn-add-ingredient">Add</button>
+      </div>
+
+      <ul id="ingredient-list"></ul>
+
+      <div class="card-row">
+        <div class="stat-card">
+          <div class="stat-label">Recipe Protein</div>
+          <div class="stat-value"><span id="recipe-protein">0</span> g</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Recipe Calories</div>
+          <div class="stat-value"><span id="recipe-calories">0</span> kcal</div>
+        </div>
+      </div>
+
+      <button id="btn-save-recipe" class="full-width">Save recipe as meal</button>
+    </section>
+
+    <!-- Progress Screen -->
+    <section id="screen-progress" class="screen">
+      <h2>Progress Overview</h2>
+      <p class="hint">
+        This is a simple view of your recent workouts & meals. We can later upgrade
+        to charts and PR tracking.
+      </p>
+      <div id="progress-workouts"></div>
+      <div id="progress-meals"></div>
+    </section>
+  </main>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" data-target="exercises">🏋️‍♂️<span>Workout</span></button>
+    <button class="nav-btn" data-target="nutrition">🥗<span>Nutrition</span></button>
+    <button class="nav-btn" data-target="recipes">📋<span>Recipes</span></button>
+    <button class="nav-btn" data-target="progress">📈<span>Progress</span></button>
+  </nav>
+
+  <script src="script.js"></script>
+</body>
+</html>
