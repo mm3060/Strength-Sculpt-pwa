@@ -7,7 +7,7 @@ let state = {
   workouts: [],        // { ts, day, exercise, weight, reps }
   meals: [],           // { ts, name, protein, calories, source }
   recipe: {
-    ingredients: []    // { name, amount }
+    ingredients: []    // { name, grams, protein, calories }
   }
 };
 
@@ -24,7 +24,6 @@ function loadState() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      // Shallow merge so new fields don't break old state
       state = {
         ...state,
         ...parsed,
@@ -274,7 +273,7 @@ async function startCameraPreview() {
   }
 }
 
-// ---------------------- USDA API (NUTRITION) ----------------------
+// ---------------------- USDA API ----------------------
 const USDA_API_KEY = "QQkHPEgBJPGvjOCCWe7JZfnfmVM9mDh6kAuHm0Ev";
 const USDA_SEARCH_URL = "https://api.nal.usda.gov/fdc/v1/foods/search";
 
@@ -375,11 +374,11 @@ function renderMeals() {
     mealLog.appendChild(row);
   });
 
-  if (proteinStat) proteinStat.textContent = totalProtein.toFixed(1) + " g";
-  if (caloriesStat) caloriesStat.textContent = totalCalories.toFixed(0) + " kcal";
+  if (proteinStat) proteinStat.textContent = totalProtein.toFixed(1);
+  if (caloriesStat) caloriesStat.textContent = totalCalories.toFixed(0);
 }
 
-// Add meal manually (or after USDA autofill)
+// Add meal manually
 if (addMealBtn) {
   addMealBtn.addEventListener("click", () => {
     const name = (mealNameInput.value || "").trim() || "Meal";
@@ -423,7 +422,7 @@ if (searchBtn && foodInput && nutritionOutput) {
     const result = await searchFood(query);
 
     if (!result) {
-      nutritionOutput.innerHTML = "<p>No results found.</p>";
+      nutritionOutput.innerHTML = "<p>No results found or offline.</p>";
       return;
     }
 
@@ -445,7 +444,7 @@ if (searchBtn && foodInput && nutritionOutput) {
       mealCaloriesInput.value = result.calories.toFixed(0);
     }
 
-    // Optionally: auto-add a meal from USDA
+    // Auto-add meal from USDA
     state.meals.push({
       ts: new Date().toISOString(),
       name: result.name,
@@ -458,55 +457,129 @@ if (searchBtn && foodInput && nutritionOutput) {
   });
 }
 
-// ---------------------- RECIPES ----------------------
-const recipeIngredientsList = document.getElementById("recipe-ingredients");
-const addIngredientBtn = document.getElementById("btn-add-ingredient");
+// ---------------------- RECIPES (Option A) ----------------------
 const ingredientNameInput = document.getElementById("ingredient-name");
-const ingredientAmountInput = document.getElementById("ingredient-amount");
+const ingredientGramsInput = document.getElementById("ingredient-grams");
+const addIngredientBtn = document.getElementById("btn-add-ingredient");
+const ingredientList = document.getElementById("ingredient-list");
+const recipeProteinEl = document.getElementById("recipe-protein");
+const recipeCaloriesEl = document.getElementById("recipe-calories");
+const saveRecipeBtn = document.getElementById("btn-save-recipe");
+
+function recomputeRecipeTotals() {
+  let totalProtein = 0;
+  let totalCalories = 0;
+
+  (state.recipe.ingredients || []).forEach((ing) => {
+    totalProtein += ing.protein || 0;
+    totalCalories += ing.calories || 0;
+  });
+
+  if (recipeProteinEl) recipeProteinEl.textContent = totalProtein.toFixed(1);
+  if (recipeCaloriesEl) recipeCaloriesEl.textContent = totalCalories.toFixed(0);
+}
 
 function renderRecipe() {
-  if (!recipeIngredientsList) return;
-  recipeIngredientsList.innerHTML = "";
+  if (!ingredientList) return;
+  ingredientList.innerHTML = "";
 
   (state.recipe.ingredients || []).forEach((ing, idx) => {
-    const li = document.createElement("div");
+    const li = document.createElement("li");
     li.className = "ingredient-row";
     li.innerHTML = `
-      <div>${ing.name} — ${ing.amount}</div>
+      <div>
+        <strong>${ing.name}</strong> — ${ing.grams} g<br>
+        <small>${ing.protein.toFixed(1)} g protein • ${ing.calories.toFixed(0)} kcal</small>
+      </div>
       <button class="btn small" data-idx="${idx}">Remove</button>
     `;
-    recipeIngredientsList.appendChild(li);
+    ingredientList.appendChild(li);
   });
 
   // Attach remove handlers
-  const removeButtons = recipeIngredientsList.querySelectorAll("button[data-idx]");
+  const removeButtons = ingredientList.querySelectorAll("button[data-idx]");
   removeButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
       const idx = parseInt(btn.dataset.idx, 10);
       state.recipe.ingredients.splice(idx, 1);
       saveState();
+      recomputeRecipeTotals();
       renderRecipe();
     });
   });
+
+  recomputeRecipeTotals();
 }
 
 if (addIngredientBtn) {
-  addIngredientBtn.addEventListener("click", () => {
+  addIngredientBtn.addEventListener("click", async () => {
     const name = (ingredientNameInput.value || "").trim();
-    const amount = (ingredientAmountInput.value || "").trim();
+    const grams = parseFloat(ingredientGramsInput.value || "0");
 
-    if (!name || !amount) {
-      alert("Enter an ingredient name and amount.");
+    if (!name || !grams) {
+      alert("Enter an ingredient name and grams.");
       return;
     }
 
-    state.recipe.ingredients.push({ name, amount });
+    // Look up per-100g values from USDA
+    const result = await searchFood(name);
+    if (!result || result.protein == null || result.calories == null) {
+      alert("Could not fetch nutrition for that ingredient (or offline). Try a simpler name.");
+      return;
+    }
+
+    const factor = grams / 100;
+
+    const ingProtein = (result.protein || 0) * factor;
+    const ingCalories = (result.calories || 0) * factor;
+
+    state.recipe.ingredients.push({
+      name,
+      grams,
+      protein: ingProtein,
+      calories: ingCalories
+    });
+
     saveState();
 
     ingredientNameInput.value = "";
-    ingredientAmountInput.value = "";
+    ingredientGramsInput.value = "";
 
     renderRecipe();
+  });
+}
+
+if (saveRecipeBtn) {
+  saveRecipeBtn.addEventListener("click", () => {
+    const ings = state.recipe.ingredients || [];
+    if (!ings.length) {
+      alert("Add ingredients first.");
+      return;
+    }
+
+    let totalProtein = 0;
+    let totalCalories = 0;
+    ings.forEach((ing) => {
+      totalProtein += ing.protein || 0;
+      totalCalories += ing.calories || 0;
+    });
+
+    state.meals.push({
+      ts: new Date().toISOString(),
+      name: "Custom Recipe",
+      protein: totalProtein,
+      calories: totalCalories,
+      source: "recipe"
+    });
+
+    // clear recipe ingredients
+    state.recipe.ingredients = [];
+    saveState();
+
+    renderRecipe();
+    renderMeals();
+
+    alert("Recipe saved as a meal.");
   });
 }
 
@@ -516,14 +589,13 @@ const progressWorkouts = document.getElementById("progress-workouts");
 const progressMeals = document.getElementById("progress-meals");
 
 function renderProgress() {
-  // Basic stats
   const workouts = state.workouts || [];
   const meals = state.meals || [];
 
   const totalWorkouts = workouts.length;
   const totalMeals = meals.length;
 
-  let totalVolume = 0; // sum of weight * reps
+  let totalVolume = 0;
   workouts.forEach((w) => {
     totalVolume += (w.weight || 0) * (w.reps || 0);
   });
@@ -537,11 +609,26 @@ function renderProgress() {
 
   if (progressSummary) {
     progressSummary.innerHTML = `
-      <p><strong>Total Workouts Logged:</strong> ${totalWorkouts}</p>
-      <p><strong>Total Volume (lbs × reps):</strong> ${totalVolume}</p>
-      <p><strong>Total Meals Logged:</strong> ${totalMeals}</p>
-      <p><strong>Total Protein Logged:</strong> ${totalProtein.toFixed(1)} g</p>
-      <p><strong>Total Calories Logged:</strong> ${totalCalories.toFixed(0)} kcal</p>
+      <div class="stat-card">
+        <div class="stat-label">Total Workouts Logged</div>
+        <div class="stat-value">${totalWorkouts}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Volume (lbs × reps)</div>
+        <div class="stat-value">${totalVolume}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Meals Logged</div>
+        <div class="stat-value">${totalMeals}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Protein Logged</div>
+        <div class="stat-value">${totalProtein.toFixed(1)} g</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Calories Logged</div>
+        <div class="stat-value">${totalCalories.toFixed(0)} kcal</div>
+      </div>
     `;
   }
 
@@ -594,9 +681,5 @@ function renderProgress() {
 // ---------------------- INITIAL RENDERS ----------------------
 renderMeals();
 renderRecipe();
-// Progress will render automatically when you tap the Progress tab
-// setScreen(...) above already calls renderProgress() when needed
+// Progress renders when you tap the Progress tab
 
-// ---------------------- DEBUG (OPTIONAL) ----------------------
-// Uncomment to quickly confirm USDA is working in the console:
-// searchFood("lentils").then(result => console.log("USDA Test:", result));
