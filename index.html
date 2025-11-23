@@ -18,7 +18,6 @@
 <body>
   <header class="app-header">
     <div class="logo">
-      <!-- Replace SS text with your actual app logo -->
       <img src="icon-192.png" alt="App Logo" style="height:40px; width:40px; border-radius:8px;">
     </div>
     <div class="title-block">
@@ -73,7 +72,7 @@
     <section id="screen-recipes" class="screen">
       <h2>Custom Recipe Builder</h2>
       <p class="hint">
-        Type an ingredient and grams. We’ll call USDA to estimate protein & calories.
+        Add ingredients in grams. We’ll use USDA to estimate protein & calories for the whole recipe.
         (Works best with simple names like “lentils”, “chickpeas”, “seitan”.)
       </p>
 
@@ -103,10 +102,16 @@
     <section id="screen-progress" class="screen">
       <h2>Progress Overview</h2>
       <p class="hint">
-        This is a simple view of your recent workouts & meals. We can later upgrade
-        to charts and PR tracking.
+        Simple view of your recent workouts & meals. Later this can become charts and PR tracking.
       </p>
+
+      <!-- Summary totals (this was missing before) -->
+      <div id="progress-summary" class="card-row"></div>
+
+      <h3>Recent Workouts</h3>
       <div id="progress-workouts"></div>
+
+      <h3>Recent Meals</h3>
       <div id="progress-meals"></div>
     </section>
   </main>
