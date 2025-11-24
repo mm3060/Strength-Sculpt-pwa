@@ -4,7 +4,7 @@ const STORAGE_KEY = "ssculpt_v1";
 let state = {
   selectedScreen: "exercises",
   selectedDay: "Day 1",
-  workouts: [],        // { ts, day, exercise, weight, reps }
+  workouts: [],        // { ts, day, exercise, weight, reps, setNumber }
   meals: [],           // { ts, name, protein, calories, source }
   recipe: {
     ingredients: []    // { name, grams, protein, calories }
@@ -83,34 +83,46 @@ const EXERCISES = {
     {
       name: "Incline Dumbbell Press",
       meta: "4 × 10",
-      video: "https://www.youtube.com/embed/8iPEnn-ltC8"
+      video: "https://www.youtube.com/embed/8iPEnn-ltC8",
+      formPdf: "forms/incline_dumbbell_press.pdf",
+      formImage: "forms/incline_dumbbell_press.png"
     },
     {
       name: "Dumbbell Shoulder Press",
       meta: "3 × 10",
-      video: "https://www.youtube.com/embed/qEwKCR5JCog"
+      video: "https://www.youtube.com/embed/qEwKCR5JCog",
+      formPdf: "forms/dumbbell_shoulder_press.pdf",
+      formImage: "forms/dumbbell_shoulder_press.png"
     },
     {
       name: "Push-ups",
       meta: "3 × max",
-      video: "https://www.youtube.com/embed/IODxDxX7oi4"
+      video: "https://www.youtube.com/embed/IODxDxX7oi4",
+      formPdf: "forms/pushups.pdf",
+      formImage: "forms/pushups.png"
     }
   ],
   "Day 2": [
     {
       name: "1-Arm Dumbbell Row",
       meta: "4 × 10",
-      video: "https://www.youtube.com/embed/pYcpY20QaE8"
+      video: "https://www.youtube.com/embed/pYcpY20QaE8",
+      formPdf: "forms/one_arm_row.pdf",
+      formImage: "forms/one_arm_row.png"
     },
     {
       name: "Pull-ups",
       meta: "3 × max",
-      video: "https://www.youtube.com/embed/eGo4IYlbE5g"
+      video: "https://www.youtube.com/embed/eGo4IYlbE5g",
+      formPdf: "forms/pullups.pdf",
+      formImage: "forms/pullups.png"
     },
     {
       name: "Dumbbell Deadlift",
       meta: "4 × 10",
-      video: "https://www.youtube.com/embed/3b6C3QvKpCU"
+      video: "https://www.youtube.com/embed/3b6C3QvKpCU",
+      formPdf: "forms/dumbbell_deadlift.pdf",
+      formImage: "forms/dumbbell_deadlift.png"
     }
   ],
   "Day 3": [
@@ -127,17 +139,23 @@ const EXERCISES = {
     {
       name: "Goblet Squat",
       meta: "4 × 12",
-      video: "https://www.youtube.com/embed/6xw0L4x0YhQ"
+      video: "https://www.youtube.com/embed/6xw0L4x0YhQ",
+      formPdf: "forms/goblet_squat.pdf",
+      formImage: "forms/goblet_squat.png"
     },
     {
       name: "Reverse Lunges",
       meta: "3 × 10 / leg",
-      video: "https://www.youtube.com/embed/2JbQlaX6eX8"
+      video: "https://www.youtube.com/embed/2JbQlaX6eX8",
+      formPdf: "forms/reverse_lunge.pdf",
+      formImage: "forms/reverse_lunge.png"
     },
     {
       name: "Dumbbell RDL",
       meta: "4 × 10",
-      video: "https://www.youtube.com/embed/5XnR9E2i7qU"
+      video: "https://www.youtube.com/embed/5XnR9E2i7qU",
+      formPdf: "forms/dumbbell_rdl.pdf",
+      formImage: "forms/dumbbell_rdl.png"
     }
   ]
 };
@@ -184,6 +202,25 @@ function renderExercises() {
     `;
     header.appendChild(left);
 
+    const right = document.createElement("div");
+    right.className = "exercise-header-actions";
+
+    if (ex.formPdf || ex.formImage) {
+      const formBtn = document.createElement("button");
+      formBtn.className = "btn secondary small";
+      formBtn.textContent = "Form Guide";
+      formBtn.addEventListener("click", () => {
+        const target = ex.formPdf || ex.formImage;
+        if (target) {
+          window.open(target, "_blank");
+        } else {
+          alert("No form guide available yet.");
+        }
+      });
+      right.appendChild(formBtn);
+    }
+
+    header.appendChild(right);
     card.appendChild(header);
 
     if (ex.video) {
@@ -201,52 +238,99 @@ function renderExercises() {
       card.appendChild(vid);
     }
 
+    // Multi-set layout (Option C)
     const actions = document.createElement("div");
-    actions.className = "exercise-actions";
+    actions.className = "exercise-actions multi-sets";
 
-    const weightInput = document.createElement("input");
-    weightInput.type = "number";
-    weightInput.placeholder = "lbs";
+    const setsTitle = document.createElement("div");
+    setsTitle.className = "sets-title";
+    setsTitle.textContent = "Log sets for this exercise";
+    actions.appendChild(setsTitle);
 
-    const repsInput = document.createElement("input");
-    repsInput.type = "number";
-    repsInput.placeholder = "reps";
+    const setsContainer = document.createElement("div");
+    setsContainer.className = "sets-container";
 
-    const logBtn = document.createElement("button");
-    logBtn.className = "btn";
-    logBtn.textContent = "Log Set";
+    const setRows = [];
 
-    logBtn.addEventListener("click", () => {
-      const w = parseFloat(weightInput.value || "0");
-      const r = parseInt(repsInput.value || "0", 10);
+    const NUM_SETS = 4; // you can change this to 3, 5, etc.
+    for (let i = 1; i <= NUM_SETS; i++) {
+      const row = document.createElement("div");
+      row.className = "set-row";
 
-      if (!w || !r) return;
+      const label = document.createElement("span");
+      label.className = "set-label";
+      label.textContent = `Set ${i}`;
 
-      state.workouts.push({
-        ts: new Date().toISOString(),
-        day: state.selectedDay,
-        exercise: ex.name,
-        weight: w,
-        reps: r
+      const weightInput = document.createElement("input");
+      weightInput.type = "number";
+      weightInput.placeholder = "lbs";
+
+      const repsInput = document.createElement("input");
+      repsInput.type = "number";
+      repsInput.placeholder = "reps";
+
+      row.appendChild(label);
+      row.appendChild(weightInput);
+      row.appendChild(repsInput);
+
+      setsContainer.appendChild(row);
+      setRows.push({ weightInput, repsInput, setNumber: i });
+    }
+
+    actions.appendChild(setsContainer);
+
+    const buttonsRow = document.createElement("div");
+    buttonsRow.className = "exercise-buttons-row";
+
+    const saveSetsBtn = document.createElement("button");
+    saveSetsBtn.className = "btn";
+    saveSetsBtn.textContent = "Save Exercise";
+
+    saveSetsBtn.addEventListener("click", () => {
+      let anyLogged = false;
+
+      setRows.forEach((row) => {
+        const w = parseFloat(row.weightInput.value || "0");
+        const r = parseInt(row.repsInput.value || "0", 10);
+
+        if (w && r) {
+          anyLogged = true;
+          state.workouts.push({
+            ts: new Date().toISOString(),
+            day: state.selectedDay,
+            exercise: ex.name,
+            weight: w,
+            reps: r,
+            setNumber: row.setNumber
+          });
+        }
       });
 
+      if (!anyLogged) {
+        alert("Enter at least one set with weight and reps.");
+        return;
+      }
+
       saveState();
-      weightInput.value = "";
-      repsInput.value = "";
+
+      // Clear all inputs
+      setRows.forEach((row) => {
+        row.weightInput.value = "";
+        row.repsInput.value = "";
+      });
     });
 
     const camBtn = document.createElement("button");
     camBtn.className = "btn secondary";
     camBtn.textContent = "Form Camera";
-
     camBtn.addEventListener("click", () => {
       startCameraPreview();
     });
 
-    actions.appendChild(weightInput);
-    actions.appendChild(repsInput);
-    actions.appendChild(logBtn);
-    actions.appendChild(camBtn);
+    buttonsRow.appendChild(saveSetsBtn);
+    buttonsRow.appendChild(camBtn);
+
+    actions.appendChild(buttonsRow);
 
     card.appendChild(actions);
     exerciseList.appendChild(card);
@@ -592,42 +676,117 @@ function renderProgress() {
   const workouts = state.workouts || [];
   const meals = state.meals || [];
 
-  const totalWorkouts = workouts.length;
-  const totalMeals = meals.length;
+  // Group by date (yyyy-mm-dd)
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
+  const sevenDaysAgo = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000); // last 7 days inclusive
 
-  let totalVolume = 0;
+  let todayWorkouts = 0;
+  let todayVolume = 0;
+  let todayMeals = 0;
+  let todayProtein = 0;
+  let todayCalories = 0;
+
+  let weekWorkouts = 0;
+  let weekVolume = 0;
+  let weekMeals = 0;
+  let weekProtein = 0;
+  let weekCalories = 0;
+
+  const activeDays = new Set();
+
   workouts.forEach((w) => {
-    totalVolume += (w.weight || 0) * (w.reps || 0);
+    const d = new Date(w.ts);
+    const dateStr = d.toISOString().slice(0, 10);
+
+    const volume = (w.weight || 0) * (w.reps || 0);
+
+    // All-time weekly (last 7 days)
+    if (d >= sevenDaysAgo && d <= today) {
+      weekWorkouts += 1;
+      weekVolume += volume;
+      activeDays.add(dateStr);
+    }
+
+    // Today
+    if (dateStr === todayStr) {
+      todayWorkouts += 1;
+      todayVolume += volume;
+      activeDays.add(dateStr);
+    }
   });
 
-  let totalProtein = 0;
-  let totalCalories = 0;
   meals.forEach((m) => {
-    totalProtein += m.protein || 0;
-    totalCalories += m.calories || 0;
+    const d = new Date(m.ts);
+    const dateStr = d.toISOString().slice(0, 10);
+
+    if (d >= sevenDaysAgo && d <= today) {
+      weekMeals += 1;
+      weekProtein += m.protein || 0;
+      weekCalories += m.calories || 0;
+      activeDays.add(dateStr);
+    }
+
+    if (dateStr === todayStr) {
+      todayMeals += 1;
+      todayProtein += m.protein || 0;
+      todayCalories += m.calories || 0;
+      activeDays.add(dateStr);
+    }
   });
+
+  const activeDaysCount = activeDays.size;
+  const avgProteinPerDay = activeDaysCount ? weekProtein / activeDaysCount : 0;
+  const avgCaloriesPerDay = activeDaysCount ? weekCalories / activeDaysCount : 0;
 
   if (progressSummary) {
     progressSummary.innerHTML = `
-      <div class="stat-card">
-        <div class="stat-label">Total Workouts Logged</div>
-        <div class="stat-value">${totalWorkouts}</div>
+      <div class="summary-section">
+        <h4>Today</h4>
+        <div class="card-row">
+          <div class="stat-card">
+            <div class="stat-label">Workouts</div>
+            <div class="stat-value">${todayWorkouts}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Volume</div>
+            <div class="stat-value">${todayVolume}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Protein</div>
+            <div class="stat-value">${todayProtein.toFixed(1)} g</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Calories</div>
+            <div class="stat-value">${todayCalories.toFixed(0)} kcal</div>
+          </div>
+        </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">Total Volume (lbs × reps)</div>
-        <div class="stat-value">${totalVolume}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Total Meals Logged</div>
-        <div class="stat-value">${totalMeals}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Total Protein Logged</div>
-        <div class="stat-value">${totalProtein.toFixed(1)} g</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Total Calories Logged</div>
-        <div class="stat-value">${totalCalories.toFixed(0)} kcal</div>
+
+      <div class="summary-section">
+        <h4>Last 7 Days</h4>
+        <div class="card-row">
+          <div class="stat-card">
+            <div class="stat-label">Workouts</div>
+            <div class="stat-value">${weekWorkouts}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Active Days</div>
+            <div class="stat-value">${activeDaysCount}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Total Volume</div>
+            <div class="stat-value">${weekVolume}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Avg Protein / Day</div>
+            <div class="stat-value">${avgProteinPerDay.toFixed(1)} g</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Avg Calories / Day</div>
+            <div class="stat-value">${avgCaloriesPerDay.toFixed(0)} kcal</div>
+          </div>
+        </div>
       </div>
     `;
   }
@@ -644,7 +803,11 @@ function renderProgress() {
         row.innerHTML = `
           <div>
             <strong>${w.exercise}</strong> (${w.day})<br>
-            ${w.weight} lbs × ${w.reps} reps
+            ${
+              w.setNumber
+                ? `Set ${w.setNumber}: `
+                : ""
+            }${w.weight} lbs × ${w.reps} reps
           </div>
           <div class="progress-time">
             ${new Date(w.ts).toLocaleDateString()}
@@ -682,4 +845,3 @@ function renderProgress() {
 renderMeals();
 renderRecipe();
 // Progress renders when you tap the Progress tab
-
